@@ -2,13 +2,17 @@
 
 set -e
 
-# SQLite DB name
+if [ $# -ne 3 ]; then
+    echo "./createSQL.sh <dbname.sqlite3> <in.bed> <table name>"
+    exit 1
+fi
+
 db=$1
+bed=$2
+name=$3
 
-sqlite3 $1 <<END
+sqlite3 ${db} <<END
 .mode tabs
-create table dmBED(chr text, pos integer, depth integer);
-.import ./test.bed dmBED
+create table ${name}(chr text, pos integer, depth integer);
+.import ${bed} ${name}
 END
-
-echo "Finished storing BED to SQLite3";
