@@ -15,4 +15,5 @@ sqlite3 ${db} <<END
 .mode tabs
 create table ${name}(chr text, pos integer, depth integer);
 .import ${bed} ${name}
+create index nameindex on ${name}(chr, pos, depth);
 END
