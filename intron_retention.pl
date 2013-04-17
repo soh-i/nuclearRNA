@@ -68,8 +68,13 @@ while (my $line = $refflat_io->getline) {
     my @end   = split /,/, $exonEnds;
     my $chck = 0;
     for my $join (0..$exonCount-1) {
+        my $exon_length   = $end[$join] - $start[$join];
+        my $intron_length = $data->{$tx_id}->{txLength} - $exon_length;
+        $data->{$tx_id}->{exonLength}   += $exon_length;
+        $data->{$tx_id}->{intronLength} += $intron_length;
+        
         push @{ $data->{$tx_id}->{exonStart} }, $start[$join];
-        push @{ $data->{$tx_id}->{exonEnd} }, $end[$join];
+        push @{ $data->{$tx_id}->{exonEnd}   }, $end[$join];
         $chck++;
     }
     die "[Parsing error]:$!" if $chck ne $exonCount;
@@ -101,6 +106,7 @@ for my $key ( keys %{$data} ) {
         $sth = $dbh->prepare("select * from $table where chr=\'$data->{$key}->{chr}\' and pos between $data->{$key}->{exonStart}[$i] and $data->{$key}->{exonEnd}[$i];");
         $sth->execute or die $sth->errstr;
         
+        my $length = 0;
         while (my $BED = $sth->fetchrow_arrayref) {
             my ($chr, $pos, $depth) = @{ $BED };
             $exon_coverage += $depth;
@@ -108,22 +114,38 @@ for my $key ( keys %{$data} ) {
     }
     
     printf "%s12\t%s20\t%d8\t%d8\t", $data->{$key}->{chr}, $data->{$key}->{tx_id}, $data->{$key}->{txStart}, $data->{$key}->{txEnd}; 
-    my $score = _calculate_SE($gene_coverage, $exon_coverage, $data->{$key}->{txLength});
+    
+    my $score = _calculate_SE(
+                              intronCov => $gene_coverage - $exon_coverage, 
+                              exonCov   => $exon_coverage,
+                              geneLen   => $data->{$key}->{txLength},
+                              exonLen   => $data->{$key}->{exonLength},
+                              intronLen => $data->{$key}->{intronLength}
+                             );
     $score ne 'NA' ? printf "%2.4f\n", $score : printf "%s\n", $score;
     
 }
 $dbh->disconnect;
 
 sub _calculate_SE {
-    my $gene_cov    = shift;
-    my $exon_cov    = shift;
-    my $gene_length = shift;
+    my %args = (
+                intronCov  => undef,
+                exonCov    => undef,
+                geneLen    => undef,
+                intronLen  => undef,
+                exonLen    => undef,
+                @_,
+               );
     
-    if ($gene_cov > 0 && $exon_cov > 0 && $gene_length > 0) {
-        my $intron_cov = $gene_cov - $exon_cov;
-        my $normalized_intron_cov = $intron_cov / $gene_length;
-        my $normalized_gene_cov   = $gene_cov / $gene_length;
-        return (!$normalized_intron_cov == 0) ? ($normalized_intron_cov / $normalized_gene_cov) : 'NA';
+    if ( $args{intronCov} > 0 && $args{exonCov} > 0 && $args{geneLen} > 0 && $args{intronLen} > 0 && $args{exonLen}) {
+        my $normalized_intron_cov = $args{intronCov} / $args{intronLen};
+        my $normalized_exon_cov   = $args{exonCov} / $args{exonLen};
+        
+        # normalized_intron_cov = intron_cov/intron_length
+        # normalized_exon_cov   = exon_cov/exon_length
+        # IRscore = normalized_intron_cov/normalized_exon_cov
+        
+        return (!$normalized_intron_cov == 0) ? ($normalized_intron_cov / $normalized_exon_cov) : 'NA';
     } 
     else {
         return 'NA';
