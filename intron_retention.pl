@@ -6,12 +6,30 @@ use strict;
 use IO::File;
 use Data::Dumper;
 use DBI;
+use Getopt::Long;
 
 $| = 1;
 
-my $database    = shift or die "SQLite is not found:$!";
-my $data_source = "dbi:SQLite:dbname=$database";
+my %opt = ();
+my $help = undef;
+GetOptions(
+           \%opt,
+           'help|h' => \$help,
+           'db=s',
+          ) or die _help();
 
+if ($help) {
+    print _help();
+    exit 0;
+}
+
+if (!$opt{db}) {
+    print "SQLite database is not specified!\n";
+    print _help();
+    exit 0;
+}
+
+my $data_source = "dbi:SQLite:dbname=$opt{db}";
 my $dbh = DBI->connect($data_source) or die $DBI::errstr;
 
 # Retrive the SQL table name
@@ -104,4 +122,17 @@ sub _calculate_SE {
         my $intron_cov = $gene_cov - $exon_cov;
         return scalar ($intron_cov/$gene_cov);
     } else { return "None" }
+}
+
+sub _help {
+    return <<EOF;
+Usage:
+    perl $0 --db <in.sqlite3>
+
+Options:
+    --db   Given a SQLite database.
+    --help Show help messages.
+    
+EOF
+
 }
