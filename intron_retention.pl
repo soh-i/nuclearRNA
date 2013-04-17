@@ -67,6 +67,7 @@ my $exon_coverage = 0;
 for my $key ( keys %{$data} ) {
     
     # Fetch as gene (Full length of trancsript)
+    next unless defined $data->{$key}->{txStart} || $data->{$key}->{txEnd};
     my $sth = $dbh->prepare("select * from $table where chr=\'$data->{$key}->{chr}\' and pos between $data->{$key}->{txStart} and $data->{$key}->{txEnd};");
     $sth->execute or die $sth->errstr;
     while (my $gene = $sth->fetchrow_arrayref) {
