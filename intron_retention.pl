@@ -82,14 +82,13 @@ while (my $line = $refflat_io->getline) {
 }
 $refflat_io->close;
 
-my $gene_coverage = 0;
-my $exon_coverage = 0;
-
 
 for my $key ( keys %{$data} ) {
-    
+    my $gene_coverage = 0;
+    my $exon_coverage = 0;
+
     # Fetch as gene (Full length of trancsript)
-    next unless defined $data->{$key}->{txStart} || $data->{$key}->{txEnd};
+    #die $key unless (defined $data->{$key}->{txStart} || defined $data->{$key}->{txEnd});
     
     my $sth = $dbh->prepare("select * from $table where chr=\'$data->{$key}->{chr}\' and pos between $data->{$key}->{txStart} and $data->{$key}->{txEnd};");
     $sth->execute or die $sth->errstr;
@@ -113,7 +112,7 @@ for my $key ( keys %{$data} ) {
         }
     }
     
-    printf "%s12\t%s20\t%d8\t%d8\t", $data->{$key}->{chr}, $data->{$key}->{tx_id}, $data->{$key}->{txStart}, $data->{$key}->{txEnd}; 
+    #printf "%s12\t%s20\t%d8\t%d8\t", $data->{$key}->{chr}, $data->{$key}->{tx_id}, $data->{$key}->{txStart}, $data->{$key}->{txEnd}; 
     
     my $score = _calculate_SE(
                               intronCov => $gene_coverage - $exon_coverage, 
@@ -122,7 +121,8 @@ for my $key ( keys %{$data} ) {
                               exonLen   => $data->{$key}->{exonLength},
                               intronLen => $data->{$key}->{intronLength}
                              );
-    $score ne 'NA' ? printf "%2.4f\n", $score : printf "%s\n", $score;
+    #$score ne 'NA' ? printf "%2.4f\n", $score : printf "%s\n", $score;
+    print $score, "\n";
     
 }
 $dbh->disconnect;
@@ -138,14 +138,18 @@ sub _calculate_SE {
                );
     
     if ( $args{intronCov} > 0 && $args{exonCov} > 0 && $args{geneLen} > 0 && $args{intronLen} > 0 && $args{exonLen}) {
-        my $normalized_intron_cov = $args{intronCov} / $args{intronLen};
-        my $normalized_exon_cov   = $args{exonCov} / $args{exonLen};
+        my $normalized_intron_signal = $args{intronCov} / $args{intronLen};
+        my $normalized_exon_signal   = $args{exonCov} / $args{exonLen};
         
-        # normalized_intron_cov = intron_cov/intron_length
-        # normalized_exon_cov   = exon_cov/exon_length
-        # IRscore = normalized_intron_cov/normalized_exon_cov
-        
-        return (!$normalized_intron_cov == 0) ? ($normalized_intron_cov / $normalized_exon_cov) : 'NA';
+        my $score = undef;
+        if (!$normalized_intron_signal == 0 && !$normalized_exon_signal == 0) {
+            $score = log($normalized_intron_signal / $normalized_exon_signal);
+            return $score;
+        }
+        else {
+            $score = 'NA';
+            return $score;
+        }
     } 
     else {
         return 'NA';
