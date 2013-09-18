@@ -11,3 +11,5 @@ Calculate intron retention score by RNA-seq data extracted drosophila nuclear RN
 * Gene annotation file (`ftp://igenome:G3nom3s4u@ussd-ftp.illumina.com/Drosophila_melanogaster/UCSC/dm3/Drosophila_melanogaster_UCSC_dm3.tar.gz`)
 
 
+## Workflow
+![](https://dl.dropboxusercontent.com/u/8677629/nucRNA.jpg)
