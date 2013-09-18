@@ -115,7 +115,7 @@ for my $key ( keys %{$data} ) {
     #printf "%s12\t%s20\t%d8\t%d8\t", $data->{$key}->{chr}, $data->{$key}->{tx_id}, $data->{$key}->{txStart}, $data->{$key}->{txEnd}; 
     
     my $score = _calculate_SE(
-                              intronCov => $gene_coverage - $exon_coverage, 
+                              intronCov => $gene_coverage - $exon_coverage,
                               exonCov   => $exon_coverage,
                               geneLen   => $data->{$key}->{txLength},
                               exonLen   => $data->{$key}->{exonLength},
